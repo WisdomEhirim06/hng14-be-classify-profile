@@ -90,9 +90,9 @@ Visit **http://localhost:8000/docs** for the interactive Swagger UI.
 
 ---
 
-## Deploying to pxxl.app
+## Deploying to Vercel
 
-I used pxxl.app for this project. To deploy here's how you'dd do yours. [pxxl.app](https://pxxl.app) is a zero-config Git-based cloud platform.
+[Vercel](https://vercel.com) runs the API as a serverless Python function via the `@vercel/python` runtime. A `vercel.json` is included in this repo.
 
 ### 1. Push to GitHub
 
@@ -104,33 +104,22 @@ git remote add origin https://github.com/<your-username>/<your-repo>.git
 git push -u origin main
 ```
 
-> Make sure `profiles.db` and `venv/` are in your `.gitignore`.
+> Make sure `profiles.db` and `venv/` are in your `.gitignore` (already included).
 
-### 2. Create a `.gitignore`
+### 2. Deploy on Vercel
 
-```
-venv/
-profiles.db
-__pycache__/
-*.pyc
-.env
-```
+1. Go to [vercel.com](https://vercel.com) and sign in.
+2. Click **Add New → Project**.
+3. Import your GitHub repository.
+4. Vercel detects the `vercel.json` automatically — no extra configuration needed.
+5. Click **Deploy**. Vercel installs dependencies from `requirements.txt` and routes all requests through `main.py`.
+6. Your live URL is shown once the deployment completes.
 
-### 3. Deploy on pxxl.app
+### 3. Environment variables (optional)
 
-1. Go to [pxxl.app](https://pxxl.app) and sign in.
-2. Click **New Project** → **Deploy from GitHub**.
-3. Authorize pxxl and select your repository.
-4. pxxl auto-detects Python projects. It will use the `Procfile` included in this repo to start the server:
-   ```
-   web: uvicorn main:app --host 0.0.0.0 --port $PORT
-   ```
-5. Click **Deploy**. pxxl will install dependencies from `requirements.txt` and start the server.
-6. Once live, your public URL will be shown in the dashboard.
+Add any secrets or config values in the Vercel project **Settings → Environment Variables** panel.
 
-### Environment variables (optional)
-
-If you later switch to PostgreSQL or add secret keys, add them in the pxxl project **Settings → Environment Variables** panel.
+> **Note:** Vercel uses ephemeral (read-only) storage, so `profiles.db` resets between cold starts. For persistent data in production, swap SQLite for a hosted database (e.g. [Neon](https://neon.tech) for Postgres) — just update the `SQLALCHEMY_DATABASE_URL` in `database.py`.
 
 ---
 
@@ -144,7 +133,7 @@ classification-logic/
 ├── schemas.py         # Pydantic request/response schemas
 ├── external_apis.py   # Async callers for Genderize, Agify, Nationalize
 ├── requirements.txt   # Python dependencies
-├── Procfile           # Process start command (for pxxl / Heroku)
+├── vercel.json        # Vercel deployment configuration
 └── README.md
 ```
 
