@@ -56,7 +56,7 @@ async def create_profile(payload: schemas.ProfileCreate, db: Session = Depends(g
         age_group=demographics["age_group"],
         country_id=demographics["country_id"],
         country_probability=demographics["country_probability"],
-        created_at=datetime.datetime.utcnow(),
+        created_at=datetime.datetime.now(datetime.timezone.utc),
     )
     db.add(profile)
     db.commit()
