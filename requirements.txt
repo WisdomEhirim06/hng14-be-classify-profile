@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+sqlalchemy
+httpx
+uuid6
+python-multipart
+pydantic
+pydantic-settings
