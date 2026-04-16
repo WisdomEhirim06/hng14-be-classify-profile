@@ -16,11 +16,11 @@ def determine_age_group(age) -> str:
     if age is None:
         return None
     age = int(age)
-    if age < 18:
+    if age <= 12:
         return "child"
-    elif age < 30:
-        return "young adult"
-    elif age < 55:
+    elif age <= 19:
+        return "teenager"
+    elif age <= 59:
         return "adult"
     else:
         return "senior"
@@ -35,13 +35,15 @@ async def fetch_all_demographics(name: str):
 
     gender_data, agify_data, nationalize_data = results
 
-    # Raise 502 only if ALL three failed
-    if gender_data is None and agify_data is None and nationalize_data is None:
-        raise HTTPException(status_code=502, detail="All external classification APIs are unavailable")
-
-    gender_data = gender_data or {}
-    agify_data = agify_data or {}
-    nationalize_data = nationalize_data or {}
+    # Specific 502 requirements
+    if gender_data is None or gender_data.get("gender") is None or gender_data.get("count") == 0:
+        raise HTTPException(status_code=502, detail="Genderize returned an invalid response")
+    
+    if agify_data is None or agify_data.get("age") is None:
+        raise HTTPException(status_code=502, detail="Agify returned an invalid response")
+    
+    if nationalize_data is None or not nationalize_data.get("country"):
+        raise HTTPException(status_code=502, detail="Nationalize returned an invalid response")
 
     gender = gender_data.get("gender")
     gender_probability = gender_data.get("probability")
@@ -57,12 +59,7 @@ async def fetch_all_demographics(name: str):
         country_id = top_country.get("country_id")
         country_probability = top_country.get("probability")
 
-    sample_size = (
-        gender_data.get("count")
-        or agify_data.get("count")
-        or (nationalize_data.get("count") if isinstance(nationalize_data.get("count"), int) else None)
-        or 0
-    )
+    sample_size = gender_data.get("count") or 0
 
     return {
         "gender": gender,

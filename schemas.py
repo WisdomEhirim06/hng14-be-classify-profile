@@ -25,9 +25,24 @@ class ProfileListResponse(BaseModel):
     id: str
     name: str
     gender: Optional[str] = None
+    age: Optional[int] = None
     age_group: Optional[str] = None
     country_id: Optional[str] = None
 
     class Config:
         orm_mode = True
         from_attributes = True
+
+class SuccessResponse(BaseModel):
+    status: str = "success"
+    data: ProfileResponse
+    message: Optional[str] = None
+
+class ListSuccessResponse(BaseModel):
+    status: str = "success"
+    count: int
+    data: list[ProfileListResponse]
+
+class ErrorResponse(BaseModel):
+    status: str = "error"
+    message: str

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -31,20 +32,34 @@ app.add_middleware(
 )
 
 
-@app.post("/api/profiles", response_model=schemas.ProfileResponse, status_code=201)
+@app.post("/api/profiles", status_code=201)
 async def create_profile(payload: schemas.ProfileCreate, db: Session = Depends(get_db)):
     name = payload.name.strip()
     if not name:
-        raise HTTPException(status_code=400, detail="Name is required")
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "message": "Missing or empty name"}
+        )
 
     # Idempotency: check existing profile by lowercase name
     existing = db.query(models.Profile).filter(
         models.Profile.name.ilike(name)
     ).first()
+    
     if existing:
-        raise HTTPException(status_code=409, detail="Profile already exists")
+        return {
+            "status": "success",
+            "message": "Profile already exists",
+            "data": existing
+        }
 
-    demographics = await fetch_all_demographics(name)
+    try:
+        demographics = await fetch_all_demographics(name)
+    except HTTPException as e:
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"status": "error", "message": e.detail}
+        )
 
     profile = models.Profile(
         id=generate_id(),
@@ -61,18 +76,27 @@ async def create_profile(payload: schemas.ProfileCreate, db: Session = Depends(g
     db.add(profile)
     db.commit()
     db.refresh(profile)
-    return profile
+    return {
+        "status": "success",
+        "data": profile
+    }
 
 
-@app.get("/api/profiles/{profile_id}", response_model=schemas.ProfileResponse)
+@app.get("/api/profiles/{profile_id}")
 def get_profile(profile_id: str, db: Session = Depends(get_db)):
     profile = db.query(models.Profile).filter(models.Profile.id == profile_id).first()
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    return profile
+        return JSONResponse(
+            status_code=404,
+            content={"status": "error", "message": "Profile not found"}
+        )
+    return {
+        "status": "success",
+        "data": profile
+    }
 
 
-@app.get("/api/profiles", response_model=List[schemas.ProfileListResponse])
+@app.get("/api/profiles")
 def list_profiles(
     gender: Optional[str] = Query(None),
     country_id: Optional[str] = Query(None),
@@ -86,14 +110,23 @@ def list_profiles(
         query = query.filter(models.Profile.country_id.ilike(country_id))
     if age_group:
         query = query.filter(models.Profile.age_group.ilike(age_group))
-    return query.all()
+    
+    profiles = query.all()
+    return {
+        "status": "success",
+        "count": len(profiles),
+        "data": profiles
+    }
 
 
 @app.delete("/api/profiles/{profile_id}", status_code=204)
 def delete_profile(profile_id: str, db: Session = Depends(get_db)):
     profile = db.query(models.Profile).filter(models.Profile.id == profile_id).first()
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        return JSONResponse(
+            status_code=404,
+            content={"status": "error", "message": "Profile not found"}
+        )
     db.delete(profile)
     db.commit()
     return None
